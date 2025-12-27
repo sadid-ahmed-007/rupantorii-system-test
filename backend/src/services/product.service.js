@@ -10,7 +10,7 @@ function buildProductWhere({ categorySlug, q, minPrice, maxPrice, status, admin 
   const where = {};
 
   if (!admin) {
-    where.status = "active";
+    where.status = { in: ["active", "out_of_stock"] };
   } else if (status) {
     where.status = status;
   }
@@ -64,7 +64,7 @@ export async function listProducts({ page = 1, limit = 20, categorySlug, q, minP
 export async function getProductById(idOrSlug, admin = false) {
   const where = admin
     ? { OR: [{ id: idOrSlug }, { slug: idOrSlug }] }
-    : { OR: [{ id: idOrSlug }, { slug: idOrSlug }], status: "active" };
+    : { OR: [{ id: idOrSlug }, { slug: idOrSlug }], status: { in: ["active", "out_of_stock"] } };
 
   const product = await prisma.product.findFirst({
     where,
@@ -95,6 +95,7 @@ export async function createProduct(payload) {
       categoryId: payload.categoryId,
       brand: payload.brand || null,
       basePrice: payload.basePrice,
+      stock: payload.stock ?? 0,
       status: payload.status || "active",
       variants: payload.variants?.length ? { create: payload.variants } : undefined
     },
@@ -114,6 +115,7 @@ export async function updateProduct(id, payload) {
     ...(payload.categoryId ? { categoryId: payload.categoryId } : {}),
     ...(payload.brand !== undefined ? { brand: payload.brand } : {}),
     ...(payload.basePrice !== undefined ? { basePrice: payload.basePrice } : {}),
+    ...(payload.stock !== undefined ? { stock: payload.stock } : {}),
     ...(payload.status ? { status: payload.status } : {})
   };
 

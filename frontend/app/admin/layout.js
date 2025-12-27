@@ -1,5 +1,5 @@
-import AdminNav from "../../components/layout/AdminNav";
 import AdminGuard from "../../components/layout/AdminGuard";
+import AdminShell from "../../components/layout/AdminShell";
 
 export const metadata = {
   title: "Rupantorii Admin",
@@ -9,13 +9,8 @@ export const metadata = {
 export default function AdminLayout({ children }) {
   return (
     <AdminGuard>
-      <section className="section-pad space-y-6 py-10">
-        <div className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.4em] text-pine">Admin</p>
-          <AdminNav />
-        </div>
-        {children}
-      </section>
+      <AdminShell>{children}</AdminShell>
     </AdminGuard>
   );
 }
+

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import api from "../../../../../lib/api";
 import Button from "../../../../../components/common/Button";
 
-const emptyVariant = { sku: "", size: "", color: "", material: "", price: "", stock: 0 };
+const emptyVariant = { sku: "", size: "", color: "", material: "", price: "", stock: "" };
 
 export default function EditProductClient({ productId }) {
   const router = useRouter();
@@ -17,6 +17,7 @@ export default function EditProductClient({ productId }) {
     categoryId: "",
     brand: "",
     basePrice: "",
+    stock: "",
     status: "active"
   });
   const [variants, setVariants] = useState([{ ...emptyVariant }]);
@@ -37,6 +38,7 @@ export default function EditProductClient({ productId }) {
         categoryId: productRes.data.categoryId,
         brand: productRes.data.brand || "",
         basePrice: productRes.data.basePrice,
+        stock: productRes.data.stock ?? 0,
         status: productRes.data.status
       });
       setVariants(productRes.data.variants?.length ? productRes.data.variants : [{ ...emptyVariant }]);
@@ -68,6 +70,7 @@ export default function EditProductClient({ productId }) {
     const payload = {
       ...form,
       basePrice: Number(form.basePrice),
+      stock: Number(form.stock || 0),
       variants: variants
         .filter((variant) => variant.sku)
         .map((variant) => ({
@@ -138,13 +141,34 @@ export default function EditProductClient({ productId }) {
           </label>
           <label className="flex flex-col gap-2 text-sm text-pine">
             <span className="uppercase tracking-[0.2em]">Base Price</span>
-            <input name="basePrice" value={form.basePrice} onChange={handleChange} type="number" className="rounded-2xl border border-mist bg-white/80 px-4 py-3" />
+            <input
+              name="basePrice"
+              value={form.basePrice}
+              onChange={handleChange}
+              inputMode="decimal"
+              placeholder="e.g. 2500"
+              className="rounded-2xl border border-mist bg-white/80 px-4 py-3"
+            />
+          </label>
+          <label className="flex flex-col gap-2 text-sm text-pine">
+            <span className="uppercase tracking-[0.2em]">Stock Qty</span>
+            <input
+              name="stock"
+              value={form.stock}
+              onChange={handleChange}
+              inputMode="numeric"
+              pattern="[0-9]*"
+              placeholder="e.g. 20"
+              className="rounded-2xl border border-mist bg-white/80 px-4 py-3"
+            />
+            <span className="text-xs text-pine">Used when no variants are added.</span>
           </label>
           <label className="flex flex-col gap-2 text-sm text-pine">
             <span className="uppercase tracking-[0.2em]">Status</span>
             <select name="status" value={form.status} onChange={handleChange} className="rounded-2xl border border-mist bg-white/80 px-4 py-3">
               <option value="active">Active</option>
               <option value="hidden">Hidden</option>
+              <option value="out_of_stock">Out of stock</option>
             </select>
           </label>
         </div>
@@ -164,8 +188,15 @@ export default function EditProductClient({ productId }) {
               <input placeholder="Size" value={variant.size || ""} onChange={(e) => updateVariant(index, "size", e.target.value)} className="rounded-xl border border-mist bg-white/80 px-3 py-2" />
               <input placeholder="Color" value={variant.color || ""} onChange={(e) => updateVariant(index, "color", e.target.value)} className="rounded-xl border border-mist bg-white/80 px-3 py-2" />
               <input placeholder="Material" value={variant.material || ""} onChange={(e) => updateVariant(index, "material", e.target.value)} className="rounded-xl border border-mist bg-white/80 px-3 py-2" />
-              <input placeholder="Price" type="number" value={variant.price || ""} onChange={(e) => updateVariant(index, "price", e.target.value)} className="rounded-xl border border-mist bg-white/80 px-3 py-2" />
-              <input placeholder="Stock" type="number" value={variant.stock} onChange={(e) => updateVariant(index, "stock", e.target.value)} className="rounded-xl border border-mist bg-white/80 px-3 py-2" />
+              <input placeholder="Price" inputMode="decimal" value={variant.price || ""} onChange={(e) => updateVariant(index, "price", e.target.value)} className="rounded-xl border border-mist bg-white/80 px-3 py-2" />
+              <input
+                placeholder="Stock Qty"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={variant.stock}
+                onChange={(e) => updateVariant(index, "stock", e.target.value)}
+                className="rounded-xl border border-mist bg-white/80 px-3 py-2"
+              />
               <button type="button" className="text-xs uppercase tracking-[0.2em] text-pine hover:text-rose" onClick={() => removeVariant(index)}>
                 Remove
               </button>

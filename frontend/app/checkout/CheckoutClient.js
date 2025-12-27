@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,6 +21,7 @@ const checkoutSchema = z.object({
 export default function CheckoutClient() {
   const router = useRouter();
   const { items, clearCart } = useCart();
+  const [confirmation, setConfirmation] = useState("");
 
   const {
     register,
@@ -46,7 +48,10 @@ export default function CheckoutClient() {
 
     const response = await api.post("/api/orders", payload);
     clearCart();
-    router.push(`/order-confirmation?order=${response.data.orderNumber}`);
+    setConfirmation("Order placed. Redirecting to confirmation...");
+    setTimeout(() => {
+      router.push(`/order-confirmation?order=${response.data.orderNumber}`);
+    }, 1000);
   };
 
   return (
@@ -68,13 +73,17 @@ export default function CheckoutClient() {
           <Button type="submit" disabled={isSubmitting} className="w-full">
             {isSubmitting ? "Placing order..." : "Place Order"}
           </Button>
+          {confirmation ? (
+            <p className="text-xs uppercase tracking-[0.3em] text-pine">{confirmation}</p>
+          ) : null}
         </form>
       </div>
       <div className="glass-card h-fit rounded-3xl p-6">
         <h3 className="text-xl text-ink">Order Summary</h3>
         <p className="mt-3 text-sm text-pine">{items.length} items in cart</p>
-        <p className="mt-1 text-xs text-pine">Cash on delivery · Delivery in 2-4 days</p>
+        <p className="mt-1 text-xs text-pine">Cash on delivery - Delivery in 2-4 days</p>
       </div>
     </section>
   );
 }
+

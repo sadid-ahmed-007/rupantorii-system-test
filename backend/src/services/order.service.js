@@ -1,10 +1,10 @@
 import { Prisma } from "@prisma/client";
 import prisma from "../config/database.js";
 
-const LOW_STOCK_THRESHOLD = 5;
+const LOW_STOCK_THRESHOLD = 10;
 
 /**
- * Creates an order and decrements variant stock atomically.
+ * Creates an order without committing stock until delivery.
  */
 export async function createOrder(payload) {
   const { customerName, customerPhone, address, city, notes, paymentMethod, items } = payload;
@@ -31,6 +31,12 @@ export async function createOrder(payload) {
       throw error;
     }
 
+    if (product.status !== "active") {
+      const error = new Error("Product is not available for ordering");
+      error.status = 400;
+      throw error;
+    }
+
     let variant = null;
     let price = product.basePrice;
 
@@ -51,6 +57,12 @@ export async function createOrder(payload) {
 
       if (variant.price !== null) {
         price = variant.price;
+      }
+    } else {
+      if (product.stock < item.quantity) {
+        const error = new Error("Insufficient stock for this product");
+        error.status = 400;
+        throw error;
       }
     }
 
@@ -78,6 +90,7 @@ export async function createOrder(payload) {
         notes: notes || null,
         paymentMethod: paymentMethod || "cod",
         totalAmount,
+        stockCommitted: false,
         items: {
           create: orderItems
         }
@@ -92,22 +105,24 @@ export async function createOrder(payload) {
       }
     });
 
-    for (const item of items) {
-      if (item.variantId) {
-        await tx.productVariant.update({
-          where: { id: item.variantId },
-          data: { stock: { decrement: item.quantity } }
-        });
-      }
-    }
-
     return order;
   });
 }
 
-export async function listOrders({ page = 1, limit = 20, status }) {
+export async function listOrders({ page = 1, limit = 20, status, q }) {
   const skip = (page - 1) * limit;
-  const where = status ? { status } : {};
+  const where = {};
+
+  if (status) {
+    where.status = status;
+  }
+
+  if (q) {
+    where.OR = [
+      { orderNumber: { contains: q, mode: "insensitive" } },
+      { id: { contains: q, mode: "insensitive" } }
+    ];
+  }
 
   const [total, data] = await Promise.all([
     prisma.order.count({ where }),
@@ -154,22 +169,139 @@ export async function getOrderById(id) {
   return order;
 }
 
-export async function updateOrderStatus(id, status) {
-  return prisma.order.update({
-    where: { id },
-    data: { status }
+export async function updateOrderStatus(id, status, cancelReason) {
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({
+      where: { id },
+      include: {
+        items: {
+          include: {
+            product: true,
+            variant: true
+          }
+        }
+      }
+    });
+
+    if (!order) {
+      const error = new Error("Order not found");
+      error.status = 404;
+      throw error;
+    }
+
+    if (status === "delivered" && !order.stockCommitted) {
+      for (const item of order.items) {
+        if (!item.variantId || !item.variant) {
+          if (item.product && item.product.stock < item.quantity) {
+            const error = new Error(`Insufficient stock for ${item.product.name}`);
+            error.status = 400;
+            throw error;
+          }
+          continue;
+        }
+
+        if (item.variant.stock < item.quantity) {
+          const error = new Error(`Insufficient stock for ${item.variant.sku}`);
+          error.status = 400;
+          throw error;
+        }
+      }
+
+      for (const item of order.items) {
+        if (!item.variantId) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { decrement: item.quantity } }
+          });
+          continue;
+        }
+
+        await tx.productVariant.update({
+          where: { id: item.variantId },
+          data: { stock: { decrement: item.quantity } }
+        });
+      }
+    }
+
+    if (status === "cancelled" && order.stockCommitted) {
+      for (const item of order.items) {
+        if (!item.variantId) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { increment: item.quantity } }
+          });
+          continue;
+        }
+
+        await tx.productVariant.update({
+          where: { id: item.variantId },
+          data: { stock: { increment: item.quantity } }
+        });
+      }
+    }
+
+    if (status === "returned" && order.stockCommitted) {
+      for (const item of order.items) {
+        if (!item.variantId) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { increment: item.quantity } }
+          });
+          continue;
+        }
+
+        await tx.productVariant.update({
+          where: { id: item.variantId },
+          data: { stock: { increment: item.quantity } }
+        });
+      }
+    }
+
+    const updatedOrder = await tx.order.update({
+      where: { id },
+      data: {
+        status,
+        ...(status === "delivered" && !order.stockCommitted ? { stockCommitted: true } : {}),
+        ...(status === "cancelled" && order.stockCommitted ? { stockCommitted: false } : {}),
+        ...(status === "returned" && order.stockCommitted ? { stockCommitted: false } : {}),
+        ...(status === "cancelled" ? { cancelReason: cancelReason || null } : { cancelReason: null })
+      }
+    });
+
+    return updatedOrder;
   });
 }
 
 export async function listLowStockAlerts() {
-  const variants = await prisma.productVariant.findMany({
-    where: { stock: { lte: LOW_STOCK_THRESHOLD } },
-    include: { product: true },
-    orderBy: { stock: "asc" }
-  });
+  const [variants, products] = await Promise.all([
+    prisma.productVariant.findMany({
+      where: { stock: { lt: LOW_STOCK_THRESHOLD } },
+      include: { product: true },
+      orderBy: { stock: "asc" }
+    }),
+    prisma.product.findMany({
+      where: { stock: { lt: LOW_STOCK_THRESHOLD }, variants: { none: {} } },
+      orderBy: { stock: "asc" }
+    })
+  ]);
 
   return {
     threshold: LOW_STOCK_THRESHOLD,
-    items: variants
+    items: [
+      ...variants.map((variant) => ({
+        type: "variant",
+        id: variant.id,
+        sku: variant.sku,
+        stock: variant.stock,
+        product: variant.product
+      })),
+      ...products.map((product) => ({
+        type: "product",
+        id: product.id,
+        sku: null,
+        stock: product.stock,
+        product
+      }))
+    ]
   };
 }

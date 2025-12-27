@@ -10,3 +10,4 @@ export function formatPrice(value) {
 export function getServerApiUrl() {
   return process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 }
+

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "../../contexts/AuthContext";
 
 const links = [
   { href: "/admin/dashboard", label: "Dashboard" },
@@ -11,6 +12,11 @@ const links = [
 
 export default function AdminNav() {
   const pathname = usePathname();
+  const { isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <nav className="flex flex-wrap gap-4 text-xs uppercase tracking-[0.3em] text-pine">
@@ -26,3 +32,4 @@ export default function AdminNav() {
     </nav>
   );
 }
+

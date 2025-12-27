@@ -59,7 +59,7 @@ export default function DashboardClient() {
           ) : (
             alerts.map((item) => (
               <div key={item.id} className="flex items-center justify-between">
-                <span>{item.product.name} · {item.sku}</span>
+                <span>{item.product.name} - {item.sku || "No variants"}</span>
                 <span className="text-rose">{item.stock} left</span>
               </div>
             ))
@@ -69,3 +69,4 @@ export default function DashboardClient() {
     </div>
   );
 }
+

@@ -1,10 +1,28 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useCart } from "../../contexts/CartContext";
 
 export default function Header() {
   const { totalItems } = useCart();
+  const pathname = usePathname();
+  const isAdmin = pathname?.startsWith("/admin");
+
+  if (isAdmin) {
+    return (
+      <header className="section-pad py-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <Link href="/admin/dashboard" className="font-display text-2xl tracking-[0.12em] text-ink">
+            Rupantorii Admin
+          </Link>
+          <nav className="flex items-center gap-6 text-xs uppercase tracking-[0.3em] text-pine">
+            <Link href="/" className="hover:text-rose">Storefront</Link>
+          </nav>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="section-pad py-6">
@@ -23,3 +41,4 @@ export default function Header() {
     </header>
   );
 }
+

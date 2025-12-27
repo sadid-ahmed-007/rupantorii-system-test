@@ -1,7 +1,7 @@
 import { body, param, query, validationResult } from "express-validator";
 
-const statusValues = ["active", "hidden"];
-const orderStatusValues = ["pending", "confirmed", "shipped", "delivered", "cancelled"];
+const statusValues = ["active", "hidden", "out_of_stock"];
+const orderStatusValues = ["pending", "confirmed", "shipped", "delivered", "cancelled", "returned"];
 
 export const validatePagination = [
   query("page").optional().isInt({ min: 1 }).toInt(),
@@ -39,6 +39,7 @@ export const validateProductCreate = [
   body("categoryId").isString().trim().escape().notEmpty(),
   body("brand").optional({ nullable: true }).isString().trim().escape(),
   body("basePrice").isFloat({ min: 0 }).toFloat(),
+  body("stock").optional().isInt({ min: 0 }).toInt(),
   body("status").optional().isIn(statusValues),
   body("variants").optional().isArray(),
   body("variants.*.sku").optional().isString().trim().escape().notEmpty(),
@@ -56,6 +57,7 @@ export const validateProductUpdate = [
   body("categoryId").optional().isString().trim().escape(),
   body("brand").optional({ nullable: true }).isString().trim().escape(),
   body("basePrice").optional().isFloat({ min: 0 }).toFloat(),
+  body("stock").optional().isInt({ min: 0 }).toInt(),
   body("status").optional().isIn(statusValues),
   body("variants").optional().isArray(),
   body("variants.*.sku").optional().isString().trim().escape().notEmpty(),
@@ -80,7 +82,8 @@ export const validateOrderCreate = [
 ];
 
 export const validateOrderStatus = [
-  body("status").isIn(orderStatusValues)
+  body("status").isIn(orderStatusValues),
+  body("cancelReason").optional({ nullable: true }).isString().trim().escape()
 ];
 
 export function handleValidation(req, res, next) {

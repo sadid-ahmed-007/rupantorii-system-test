@@ -13,7 +13,7 @@ const placeholderImages = [
 ];
 
 const categories = [
-  { name: "Bangles (?????)", slug: "bangles", description: "Traditional bangles with modern elegance." },
+  { name: "Bangles", slug: "bangles", description: "Traditional bangles with modern elegance." },
   { name: "Bracelets", slug: "bracelets", description: "Lightweight daily-wear bracelets." },
   { name: "Necklaces", slug: "necklaces", description: "Statement necklaces for special moments." },
   { name: "Rings", slug: "rings", description: "Minimal rings with intricate detailing." },
@@ -28,11 +28,11 @@ const products = [
     description: "Warm rose-gold bangles crafted for everyday radiance.",
     brand: "Rupantorii",
     basePrice: 2800,
-    status: "active",
+    status: "out_of_stock",
     categorySlug: "bangles",
     variants: [
-      { sku: "RUP-BAN-001-XS", size: "XS", color: "Rose Gold", material: "Brass", price: 2600, stock: 3 },
-      { sku: "RUP-BAN-001-M", size: "M", color: "Rose Gold", material: "Brass", price: 2800, stock: 12 }
+      { sku: "RUP-BAN-001-XS", size: "XS", color: "Rose Gold", material: "Brass", price: 2600, stock: 0 },
+      { sku: "RUP-BAN-001-M", size: "M", color: "Rose Gold", material: "Brass", price: 2800, stock: 0 }
     ],
     images: [
       { url: placeholderImages[0], alt: "Rose Aura Bangles front", isPrimary: true },

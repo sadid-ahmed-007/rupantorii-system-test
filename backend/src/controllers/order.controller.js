@@ -27,7 +27,8 @@ export async function listOrdersHandler(req, res, next) {
     const result = await listOrders({
       page,
       limit,
-      status: req.query.status
+      status: req.query.status,
+      q: req.query.q
     });
 
     return res.json(result);
@@ -47,7 +48,11 @@ export async function getOrderHandler(req, res, next) {
 
 export async function updateOrderStatusHandler(req, res, next) {
   try {
-    const order = await updateOrderStatus(req.params.id, req.body.status);
+    if (req.body.status === "cancelled" && !req.body.cancelReason) {
+      return res.status(400).json({ message: "Cancellation reason is required." });
+    }
+
+    const order = await updateOrderStatus(req.params.id, req.body.status, req.body.cancelReason);
     return res.json(order);
   } catch (error) {
     return next(error);

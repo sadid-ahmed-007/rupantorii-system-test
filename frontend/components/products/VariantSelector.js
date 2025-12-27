@@ -22,10 +22,12 @@ export default function VariantSelector({ variants, selectedId, onChange }) {
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-medium text-ink">{variant.sku}</span>
-              <span className="text-xs text-pine">Stock: {variant.stock}</span>
+              {variant.stock <= 10 ? (
+                <span className="text-xs text-pine">Stock: {variant.stock}</span>
+              ) : null}
             </div>
             <div className="mt-2 text-xs text-pine">
-              {[variant.size, variant.color, variant.material].filter(Boolean).join(" · ")}
+              {[variant.size, variant.color, variant.material].filter(Boolean).join(" - ")}
             </div>
           </button>
         ))}
@@ -33,3 +35,4 @@ export default function VariantSelector({ variants, selectedId, onChange }) {
     </div>
   );
 }
+
